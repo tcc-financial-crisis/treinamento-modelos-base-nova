@@ -1,0 +1,143 @@
+{
+  "run_id": "2026-07-13",
+  "created_at": "2026-07-13T16:12:22.958088+00:00",
+  "dataset": "raw\\dataset_merged_binary.csv",
+  "features": [
+    "credit_spread",
+    "credit_spread_diff",
+    "industrial_production",
+    "industrial_production_mom",
+    "industrial_production_yoy",
+    "price_index",
+    "inflation_mom",
+    "inflation_yoy",
+    "real_interest",
+    "real_interest_diff",
+    "volatility_index",
+    "volatility_index_mom",
+    "yield_curve_slope",
+    "yield_curve_slope_diff"
+  ],
+  "target": "target_12m",
+  "preprocessing": "StandardScaler e PCA ajustados apenas no treino",
+  "best_params": {
+    "decision_tree_no_pca": {
+      "ccp_alpha": 0.0,
+      "max_depth": 3,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2
+    },
+    "decision_tree_pca": {
+      "ccp_alpha": 0.0,
+      "max_depth": 3,
+      "min_samples_leaf": 2,
+      "min_samples_split": 2
+    },
+    "knn_no_pca": {
+      "model__metric": "manhattan",
+      "model__n_neighbors": 11,
+      "model__weights": "uniform"
+    },
+    "knn_pca": {
+      "model__metric": "manhattan",
+      "model__n_neighbors": 3,
+      "model__weights": "distance"
+    },
+    "random_forest_no_pca": {
+      "class_weight": "balanced",
+      "max_depth": 10,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2,
+      "n_estimators": 100
+    },
+    "random_forest_pca": {
+      "class_weight": null,
+      "max_depth": 5,
+      "min_samples_leaf": 2,
+      "min_samples_split": 10,
+      "n_estimators": 100
+    }
+  },
+  "resultados": [
+    {
+      "modelo": "Decision Tree (sem PCA)",
+      "accuracy": 0.5877862595419847,
+      "precision": 0.5719483568075118,
+      "recall": 0.5842032967032966,
+      "f1_macro": 0.5633333333333334,
+      "tempo_treino_s": 4.5943,
+      "tempo_predicao_ms": 0.7432,
+      "memoria_mb": 188.15
+    },
+    {
+      "modelo": "Decision Tree (PCA)",
+      "accuracy": 0.5343511450381679,
+      "precision": 0.515183615819209,
+      "recall": 0.5177197802197802,
+      "f1_macro": 0.504802627502014,
+      "tempo_treino_s": 0.5015,
+      "tempo_predicao_ms": 0.7851,
+      "memoria_mb": 195.2
+    },
+    {
+      "modelo": "KNN (sem PCA)",
+      "accuracy": 0.5725190839694656,
+      "precision": 0.5096656217345873,
+      "recall": 0.5101648351648351,
+      "f1_macro": 0.5093632958801498,
+      "tempo_treino_s": 0.2485,
+      "tempo_predicao_ms": 2.8355,
+      "memoria_mb": 202.46
+    },
+    {
+      "modelo": "KNN (PCA)",
+      "accuracy": 0.5877862595419847,
+      "precision": 0.6551418439716312,
+      "recall": 0.6682692307692308,
+      "f1_macro": 0.5866058906030855,
+      "tempo_treino_s": 0.2101,
+      "tempo_predicao_ms": 1.7915,
+      "memoria_mb": 207.07
+    },
+    {
+      "modelo": "Voting Ensemble (sem PCA)",
+      "accuracy": 0.5190839694656488,
+      "precision": 0.5618305744888024,
+      "recall": 0.5697802197802198,
+      "f1_macro": 0.5150143973673386,
+      "tempo_treino_s": 0.2634,
+      "tempo_predicao_ms": 20.22,
+      "memoria_mb": 212.43
+    },
+    {
+      "modelo": "Voting Ensemble (PCA)",
+      "accuracy": 0.5801526717557252,
+      "precision": 0.572829131652661,
+      "recall": 0.5857142857142856,
+      "f1_macro": 0.5600537338950968,
+      "tempo_treino_s": 0.2387,
+      "tempo_predicao_ms": 19.9203,
+      "memoria_mb": 202.15
+    },
+    {
+      "modelo": "Random Forest (sem PCA)",
+      "accuracy": 0.6106870229007634,
+      "precision": 0.5868895211000474,
+      "recall": 0.6006868131868132,
+      "f1_macro": 0.5825679475164012,
+      "tempo_treino_s": 15.9552,
+      "tempo_predicao_ms": 8.3032,
+      "memoria_mb": 204.45
+    },
+    {
+      "modelo": "Random Forest (PCA)",
+      "accuracy": 0.5954198473282443,
+      "precision": 0.6192725555030704,
+      "recall": 0.6387362637362637,
+      "f1_macro": 0.5876343766704282,
+      "tempo_treino_s": 15.4916,
+      "tempo_predicao_ms": 9.4268,
+      "memoria_mb": 203.74
+    }
+  ]
+}

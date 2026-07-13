@@ -2,8 +2,10 @@
 """
 Pipeline de treinamento de modelos para predicao de crise financeira (target_12m).
 
-Encapsula o fluxo do notebook treinamento.ipynb de forma eficiente:
-- preprocessamento unico (StandardScaler + PCA)
+Encapsula o fluxo do notebook treinamento_todas_features.ipynb:
+- 14 features (series base + variacoes diff/mom/yoy)
+- split temporal antes do preprocessamento (evita vazamento)
+- StandardScaler e PCA ajustados apenas no conjunto de treino
 - GridSearchCV paralelo (TimeSeriesSplit)
 - artefatos persistidos em disco (joblib) e enviados ao S3
 - pickle do proprio script gerado ao final
@@ -51,11 +53,19 @@ from sklearn.tree import DecisionTreeClassifier
 
 FEATURES = [
     "credit_spread",
+    "credit_spread_diff",
     "industrial_production",
+    "industrial_production_mom",
+    "industrial_production_yoy",
     "price_index",
+    "inflation_mom",
+    "inflation_yoy",
     "real_interest",
+    "real_interest_diff",
     "volatility_index",
+    "volatility_index_mom",
     "yield_curve_slope",
+    "yield_curve_slope_diff",
 ]
 PCA_FEATURES = ["pca_1", "pca_2", "pca_3"]
 LABELS = ["Normal", "Crise"]
@@ -85,6 +95,7 @@ class TrainingContext:
     run_id: str
     run_dir: Path
     resultados: list[dict[str, Any]] = field(default_factory=list)
+    predicoes: list[dict[str, Any]] = field(default_factory=list)
     artifacts: list[Path] = field(default_factory=list)
     best_params: dict[str, dict[str, Any]] = field(default_factory=dict)
 
@@ -109,54 +120,70 @@ def _timed_predict(model, X_test) -> tuple[np.ndarray, float]:
     return preds, time.time() - start
 
 
-def load_and_prepare(config: TrainingConfig) -> tuple[pd.DataFrame, pd.DataFrame, StandardScaler, PCA]:
+def load_and_split(config: TrainingConfig) -> tuple[dict[str, Any], StandardScaler, PCA]:
     cols = ["date", *FEATURES, "target_12m"]
     df = pd.read_csv(config.dataset_path, parse_dates=["date"])
     df = df[cols].dropna().sort_values("date").reset_index(drop=True)
 
+    X = df[FEATURES]
+    y = df["target_12m"]
+
+    X_train_raw, X_test_raw, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=config.test_size,
+        random_state=config.random_state,
+        shuffle=False,
+    )
+
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df[FEATURES].values)
+    X_train_scaled = scaler.fit_transform(X_train_raw)
+    X_test_scaled = scaler.transform(X_test_raw)
 
     pca = PCA(n_components=3)
-    X_pca = pca.fit_transform(X_scaled)
-
-    df_pca = pd.DataFrame(X_pca, columns=PCA_FEATURES)
-    df_pca = pd.concat([df_pca, df[["date", "target_12m"]].reset_index(drop=True)], axis=1)
+    X_train_pca_arr = pca.fit_transform(X_train_scaled)
+    X_test_pca_arr = pca.transform(X_test_scaled)
 
     explained = pca.explained_variance_ratio_
     print(
-        f"PCA: PC1={explained[0]:.2%}, PC2={explained[1]:.2%}, "
+        f"PCA (ajustado no treino): PC1={explained[0]:.2%}, PC2={explained[1]:.2%}, "
         f"PC3={explained[2]:.2%}, total={explained.sum():.2%}"
     )
-    return df, df_pca, scaler, pca
 
+    X_train_pca = pd.DataFrame(
+        X_train_pca_arr,
+        columns=PCA_FEATURES,
+        index=X_train_raw.index,
+    )
+    X_test_pca = pd.DataFrame(
+        X_test_pca_arr,
+        columns=PCA_FEATURES,
+        index=X_test_raw.index,
+    )
 
-def split_data(
-    df: pd.DataFrame,
-    df_pca: pd.DataFrame,
-    config: TrainingConfig,
-) -> dict[str, Any]:
-    y = df["target_12m"]
-    splits = {}
+    dates_train = df.loc[X_train_raw.index, "date"].reset_index(drop=True)
+    dates_test = df.loc[X_test_raw.index, "date"].reset_index(drop=True)
 
-    for variant, X in (
-        ("no_pca", df[FEATURES]),
-        ("pca", df_pca[PCA_FEATURES]),
-    ):
-        X_train, X_test, y_train, y_test = train_test_split(
-            X,
-            y,
-            test_size=config.test_size,
-            random_state=config.random_state,
-            shuffle=False,
-        )
-        splits[variant] = {
-            "X_train": X_train,
-            "X_test": X_test,
-            "y_train": y_train,
-            "y_test": y_test,
-        }
-    return splits
+    split_base = {
+        "dates_train": dates_train,
+        "dates_test": dates_test,
+        "y_train": y_train.reset_index(drop=True),
+        "y_test": y_test.reset_index(drop=True),
+    }
+
+    splits = {
+        "no_pca": {
+            **split_base,
+            "X_train": X_train_raw.reset_index(drop=True),
+            "X_test": X_test_raw.reset_index(drop=True),
+        },
+        "pca": {
+            **split_base,
+            "X_train": X_train_pca.reset_index(drop=True),
+            "X_test": X_test_pca.reset_index(drop=True),
+        },
+    }
+    return splits, scaler, pca
 
 
 def _save_confusion_matrix(
@@ -180,6 +207,41 @@ def _save_confusion_matrix(
     ctx.artifacts.append(path)
 
 
+def _label_name(value: int) -> str:
+    return LABELS[int(value)]
+
+
+def _positive_proba(model, X) -> np.ndarray | None:
+    if not hasattr(model, "predict_proba"):
+        return None
+    return model.predict_proba(X)[:, 1]
+
+
+def _append_predictions(
+    ctx: TrainingContext,
+    nome_modelo: str,
+    conjunto: str,
+    dates: pd.Series,
+    y_true,
+    y_pred,
+    prob_crise: np.ndarray | None = None,
+) -> None:
+    for i, (date, yt, yp) in enumerate(zip(dates, y_true, y_pred)):
+        registro = {
+            "modelo": nome_modelo,
+            "conjunto": conjunto,
+            "date": pd.Timestamp(date).strftime("%Y-%m-%d"),
+            "y_true": int(yt),
+            "y_pred": int(yp),
+            "y_true_label": _label_name(yt),
+            "y_pred_label": _label_name(yp),
+            "acerto": int(yt == yp),
+        }
+        if prob_crise is not None:
+            registro["prob_crise"] = round(float(prob_crise[i]), 6)
+        ctx.predicoes.append(registro)
+
+
 def _register_result(
     ctx: TrainingContext,
     nome_modelo: str,
@@ -189,6 +251,10 @@ def _register_result(
     tempo_predicao: float,
     y_train=None,
     y_pred_train=None,
+    dates_train: pd.Series | None = None,
+    dates_test: pd.Series | None = None,
+    prob_train: np.ndarray | None = None,
+    prob_test: np.ndarray | None = None,
 ) -> None:
     ctx.resultados.append(
         {
@@ -225,6 +291,13 @@ def _register_result(
     )
     print(f"Tempo treino: {tempo_treino:.4f}s | Predicao: {tempo_predicao * 1000:.4f}ms")
 
+    if dates_train is not None and y_train is not None and y_pred_train is not None:
+        _append_predictions(
+            ctx, nome_modelo, "treino", dates_train, y_train, y_pred_train, prob_train
+        )
+    if dates_test is not None:
+        _append_predictions(ctx, nome_modelo, "teste", dates_test, y_test, y_pred_test, prob_test)
+
     slug = nome_modelo.lower().replace(" ", "_").replace("(", "").replace(")", "")
     _save_confusion_matrix(ctx, y_test, y_pred_test, f"{nome_modelo} - Teste", f"cm_test_{slug}.png")
     if y_train is not None and y_pred_train is not None:
@@ -260,9 +333,10 @@ def _grid_search(
 
 def train_decision_tree(ctx: TrainingContext, splits: dict, tscv: TimeSeriesSplit) -> None:
     param_grid = {
-        "max_depth": [3, 5, 7],
+        "max_depth": [3, 5, 7, 10],
         "min_samples_split": [2, 5, 10],
         "min_samples_leaf": [1, 2, 4],
+        "ccp_alpha": [0.0, 0.001, 0.005],
     }
     base = DecisionTreeClassifier(random_state=ctx.config.random_state)
 
@@ -282,6 +356,10 @@ def train_decision_tree(ctx: TrainingContext, splits: dict, tscv: TimeSeriesSpli
             tempo_pred,
             data["y_train"],
             y_pred_train,
+            data["dates_train"],
+            data["dates_test"],
+            _positive_proba(model, data["X_train"]),
+            _positive_proba(model, data["X_test"]),
         )
         _persist_model(ctx, f"decision_tree_{variant}", model)
 
@@ -294,7 +372,7 @@ def train_knn(ctx: TrainingContext, splits: dict, tscv: TimeSeriesSplit) -> None
         ]
     )
     param_grid = {
-        "model__n_neighbors": [3, 5, 7, 9, 11, 15],
+        "model__n_neighbors": [3, 5, 7, 9, 11, 15, 21],
         "model__weights": ["uniform", "distance"],
         "model__metric": ["euclidean", "manhattan"],
     }
@@ -315,6 +393,10 @@ def train_knn(ctx: TrainingContext, splits: dict, tscv: TimeSeriesSplit) -> None
             tempo_pred,
             data["y_train"],
             y_pred_train,
+            data["dates_train"],
+            data["dates_test"],
+            _positive_proba(model, data["X_train"]),
+            _positive_proba(model, data["X_test"]),
         )
         _persist_model(ctx, f"knn_{variant}", model)
 
@@ -346,6 +428,10 @@ def train_voting(ctx: TrainingContext, splits: dict) -> None:
             tempo_pred,
             data["y_train"],
             y_pred_train,
+            data["dates_train"],
+            data["dates_test"],
+            _positive_proba(model, data["X_train"]),
+            _positive_proba(model, data["X_test"]),
         )
         _persist_model(ctx, f"voting_{variant}", model)
 
@@ -382,10 +468,10 @@ def _save_feature_importance(
 
 def train_random_forest(ctx: TrainingContext, splits: dict, tscv: TimeSeriesSplit) -> None:
     param_grid = {
-        "n_estimators": [100, 200, 300],
-        "max_depth": [None, 5, 10],
-        "min_samples_split": [2, 5],
-        "min_samples_leaf": [1, 2],
+        "n_estimators": [100, 200],
+        "max_depth": [5, 10, None],
+        "min_samples_split": [2, 5, 10],
+        "min_samples_leaf": [1, 2, 4],
         "class_weight": [None, "balanced"],
     }
     base = RandomForestClassifier(random_state=ctx.config.random_state)
@@ -409,6 +495,10 @@ def train_random_forest(ctx: TrainingContext, splits: dict, tscv: TimeSeriesSpli
             tempo_pred,
             data["y_train"],
             y_pred_train,
+            data["dates_train"],
+            data["dates_test"],
+            _positive_proba(model, data["X_train"]),
+            _positive_proba(model, data["X_test"]),
         )
         _persist_model(ctx, f"random_forest_{variant}", model)
         print(f"\nImportancia das variaveis ({label}):")
@@ -419,6 +509,23 @@ def train_random_forest(ctx: TrainingContext, splits: dict, tscv: TimeSeriesSpli
             f"Importancia - Random Forest ({label})",
             f"rf_importance_{variant}",
         )
+
+
+def save_predictions(ctx: TrainingContext) -> Path:
+    df_predicoes = pd.DataFrame(ctx.predicoes)
+    csv_path = ctx.run_dir / "predicoes.csv"
+    json_path = ctx.run_dir / "predicoes.json"
+    teste_path = ctx.run_dir / "predicoes_teste.csv"
+
+    df_predicoes.to_csv(csv_path, index=False)
+    df_predicoes.to_json(json_path, orient="records", indent=2, force_ascii=False)
+
+    df_teste = df_predicoes[df_predicoes["conjunto"] == "teste"].copy()
+    df_teste.to_csv(teste_path, index=False)
+
+    ctx.artifacts.extend([csv_path, json_path, teste_path])
+    print(f"\nPrevisoes salvas: {csv_path} ({len(df_predicoes)} registros)")
+    return csv_path
 
 
 def save_summary(ctx: TrainingContext) -> Path:
@@ -436,8 +543,13 @@ def save_summary(ctx: TrainingContext) -> Path:
         "run_id": ctx.run_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "dataset": str(ctx.config.dataset_path),
+        "features": FEATURES,
+        "target": "target_12m",
+        "preprocessing": "StandardScaler e PCA ajustados apenas no treino",
         "best_params": ctx.best_params,
         "resultados": ctx.resultados,
+        "predicoes_count": len(ctx.predicoes),
+        "predicoes_files": ["predicoes.csv", "predicoes.json", "predicoes_teste.csv"],
     }
     meta_path.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -559,8 +671,7 @@ def run_training(config: TrainingConfig) -> dict[str, Any]:
     ctx = TrainingContext(config=config, run_id=run_id, run_dir=run_dir)
     tscv = TimeSeriesSplit(n_splits=config.n_splits)
 
-    df, df_pca, scaler, pca = load_and_prepare(config)
-    splits = split_data(df, df_pca, config)
+    splits, scaler, pca = load_and_split(config)
 
     joblib.dump(scaler, run_dir / "scaler.joblib")
     joblib.dump(pca, run_dir / "pca.joblib")
@@ -571,6 +682,7 @@ def run_training(config: TrainingConfig) -> dict[str, Any]:
     train_voting(ctx, splits)
     train_random_forest(ctx, splits, tscv)
 
+    save_predictions(ctx)
     save_summary(ctx)
     save_comparison_plot(ctx)
 
