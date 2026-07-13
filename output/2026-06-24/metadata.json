@@ -1,0 +1,123 @@
+{
+  "run_id": "2026-06-24",
+  "created_at": "2026-06-24T19:36:55.001371+00:00",
+  "dataset": "raw\\dataset_merged_binary.csv",
+  "best_params": {
+    "decision_tree_no_pca": {
+      "max_depth": 3,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2
+    },
+    "decision_tree_pca": {
+      "max_depth": 5,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2
+    },
+    "knn_no_pca": {
+      "model__metric": "manhattan",
+      "model__n_neighbors": 3,
+      "model__weights": "uniform"
+    },
+    "knn_pca": {
+      "model__metric": "manhattan",
+      "model__n_neighbors": 15,
+      "model__weights": "uniform"
+    },
+    "random_forest_no_pca": {
+      "class_weight": null,
+      "max_depth": null,
+      "min_samples_leaf": 1,
+      "min_samples_split": 5,
+      "n_estimators": 200
+    },
+    "random_forest_pca": {
+      "class_weight": null,
+      "max_depth": 5,
+      "min_samples_leaf": 2,
+      "min_samples_split": 5,
+      "n_estimators": 100
+    }
+  },
+  "resultados": [
+    {
+      "modelo": "Decision Tree (sem PCA)",
+      "accuracy": 0.6412213740458015,
+      "precision": 0.3387096774193548,
+      "recall": 0.46153846153846156,
+      "f1_macro": 0.39069767441860465,
+      "tempo_treino_s": 5.5428,
+      "tempo_predicao_ms": 0.7811,
+      "memoria_mb": 187.49
+    },
+    {
+      "modelo": "Decision Tree (PCA)",
+      "accuracy": 0.48091603053435117,
+      "precision": 0.5319810851169736,
+      "recall": 0.5353021978021978,
+      "f1_macro": 0.4784543325526932,
+      "tempo_treino_s": 0.1813,
+      "tempo_predicao_ms": 0.5286,
+      "memoria_mb": 196.17
+    },
+    {
+      "modelo": "KNN (sem PCA)",
+      "accuracy": 0.42748091603053434,
+      "precision": 0.4377045348293595,
+      "recall": 0.42678571428571427,
+      "f1_macro": 0.4108652635366073,
+      "tempo_treino_s": 0.237,
+      "tempo_predicao_ms": 2.3768,
+      "memoria_mb": 201.54
+    },
+    {
+      "modelo": "KNN (PCA)",
+      "accuracy": 0.44274809160305345,
+      "precision": 0.45880281690140845,
+      "recall": 0.45178571428571423,
+      "f1_macro": 0.4294493168665354,
+      "tempo_treino_s": 0.2277,
+      "tempo_predicao_ms": 2.7137,
+      "memoria_mb": 208.54
+    },
+    {
+      "modelo": "Voting Ensemble (sem PCA)",
+      "accuracy": 0.5038167938931297,
+      "precision": 0.45171727227476355,
+      "recall": 0.44670329670329667,
+      "f1_macro": 0.44697018899785673,
+      "tempo_treino_s": 0.2984,
+      "tempo_predicao_ms": 21.7695,
+      "memoria_mb": 213.65
+    },
+    {
+      "modelo": "Voting Ensemble (PCA)",
+      "accuracy": 0.42748091603053434,
+      "precision": 0.47791164658634533,
+      "recall": 0.4758241758241758,
+      "f1_macro": 0.4253377785576417,
+      "tempo_treino_s": 0.2763,
+      "tempo_predicao_ms": 20.9308,
+      "memoria_mb": 200.87
+    },
+    {
+      "modelo": "Random Forest (sem PCA)",
+      "accuracy": 0.5343511450381679,
+      "precision": 0.5269607843137255,
+      "recall": 0.5317307692307692,
+      "f1_macro": 0.5120595957745618,
+      "tempo_treino_s": 17.0251,
+      "tempo_predicao_ms": 17.704,
+      "memoria_mb": 204.23
+    },
+    {
+      "modelo": "Random Forest (PCA)",
+      "accuracy": 0.45038167938931295,
+      "precision": 0.5058257345491388,
+      "recall": 0.5063186813186813,
+      "f1_macro": 0.4488078541374474,
+      "tempo_treino_s": 17.3382,
+      "tempo_predicao_ms": 9.4337,
+      "memoria_mb": 201.93
+    }
+  ]
+}
