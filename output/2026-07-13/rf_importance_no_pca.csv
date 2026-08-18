@@ -1,0 +1,15 @@
+feature,importance
+volatility_index,0.29248167373337697
+price_index,0.16024570084672193
+yield_curve_slope,0.09257230735707137
+industrial_production,0.0910773210145929
+industrial_production_yoy,0.0743900420820705
+real_interest,0.06589074719109463
+credit_spread,0.05928713415185514
+inflation_yoy,0.0413944774505853
+credit_spread_diff,0.02833806764847643
+yield_curve_slope_diff,0.023887145040523874
+real_interest_diff,0.01882842014707492
+inflation_mom,0.018435494351375196
+volatility_index_mom,0.017817988291571014
+industrial_production_mom,0.015353480693609894

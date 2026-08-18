@@ -1,0 +1,82 @@
+[
+  {
+    "modelo":"Decision Tree (sem PCA)",
+    "accuracy":0.5878,
+    "precision":0.5719,
+    "recall":0.5842,
+    "f1_macro":0.5633,
+    "tempo_treino_s":4.5943,
+    "tempo_predicao_ms":0.7432,
+    "memoria_mb":188.15
+  },
+  {
+    "modelo":"Decision Tree (PCA)",
+    "accuracy":0.5344,
+    "precision":0.5152,
+    "recall":0.5177,
+    "f1_macro":0.5048,
+    "tempo_treino_s":0.5015,
+    "tempo_predicao_ms":0.7851,
+    "memoria_mb":195.2
+  },
+  {
+    "modelo":"KNN (sem PCA)",
+    "accuracy":0.5725,
+    "precision":0.5097,
+    "recall":0.5102,
+    "f1_macro":0.5094,
+    "tempo_treino_s":0.2485,
+    "tempo_predicao_ms":2.8355,
+    "memoria_mb":202.46
+  },
+  {
+    "modelo":"KNN (PCA)",
+    "accuracy":0.5878,
+    "precision":0.6551,
+    "recall":0.6683,
+    "f1_macro":0.5866,
+    "tempo_treino_s":0.2101,
+    "tempo_predicao_ms":1.7915,
+    "memoria_mb":207.07
+  },
+  {
+    "modelo":"Voting Ensemble (sem PCA)",
+    "accuracy":0.5191,
+    "precision":0.5618,
+    "recall":0.5698,
+    "f1_macro":0.515,
+    "tempo_treino_s":0.2634,
+    "tempo_predicao_ms":20.22,
+    "memoria_mb":212.43
+  },
+  {
+    "modelo":"Voting Ensemble (PCA)",
+    "accuracy":0.5802,
+    "precision":0.5728,
+    "recall":0.5857,
+    "f1_macro":0.5601,
+    "tempo_treino_s":0.2387,
+    "tempo_predicao_ms":19.9203,
+    "memoria_mb":202.15
+  },
+  {
+    "modelo":"Random Forest (sem PCA)",
+    "accuracy":0.6107,
+    "precision":0.5869,
+    "recall":0.6007,
+    "f1_macro":0.5826,
+    "tempo_treino_s":15.9552,
+    "tempo_predicao_ms":8.3032,
+    "memoria_mb":204.45
+  },
+  {
+    "modelo":"Random Forest (PCA)",
+    "accuracy":0.5954,
+    "precision":0.6193,
+    "recall":0.6387,
+    "f1_macro":0.5876,
+    "tempo_treino_s":15.4916,
+    "tempo_predicao_ms":9.4268,
+    "memoria_mb":203.74
+  }
+]
