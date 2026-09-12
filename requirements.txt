@@ -5,3 +5,5 @@ scikit-learn
 psutil
 boto3
 joblib
+tensorflow
+seaborn
