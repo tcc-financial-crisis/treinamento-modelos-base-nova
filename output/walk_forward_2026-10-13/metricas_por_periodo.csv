@@ -1,0 +1,7 @@
+periodo,inicio,fim,meses,modelo,crises_identificadas,normais_identificados,Recall Crise,Recall Normal,Precisao macro,F1 macro,AUC,Brier
+walk-forward completo,2000-02,2026-04,315,KNN (PCA),105/144,107/171,0.729,0.626,0.677,0.673,0.752,0.24
+walk-forward completo,2000-02,2026-04,315,Random Forest (PCA),113/144,105/171,0.785,0.614,0.702,0.692,0.767,0.206
+periodo de teste do notebook,2015-06,2026-04,131,KNN (PCA),23/40,61/91,0.575,0.67,0.608,0.608,0.657,0.278
+periodo de teste do notebook,2015-06,2026-04,131,Random Forest (PCA),24/40,62/91,0.6,0.681,0.624,0.625,0.69,0.222
+antes do teste do notebook,2000-02,2015-05,184,KNN (PCA),82/104,46/80,0.788,0.575,0.692,0.684,0.787,0.213
+antes do teste do notebook,2000-02,2015-05,184,Random Forest (PCA),89/104,43/80,0.856,0.538,0.724,0.699,0.785,0.196

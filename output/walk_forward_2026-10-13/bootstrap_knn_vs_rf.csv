@@ -1,0 +1,5 @@
+metrica,diferenca_knn_menos_rf,ic95_inferior,ic95_superior,significativa,pct_reamostras_rf_melhor,pct_reamostras_knn_melhor
+Recall Crise,-0.056,-0.108,0.0,Nao,95.8,2.5
+Recall Normal,0.012,-0.085,0.136,Nao,28.8,67.6
+Precisao macro,-0.025,-0.075,0.04,Nao,70.5,29.4
+F1 macro,-0.019,-0.076,0.055,Nao,60.0,39.9
